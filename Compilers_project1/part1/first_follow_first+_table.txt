@@ -1,0 +1,38 @@
+part 1)
+
+GOAL->EXP $
+EXP-> TERM EXP1
+EXP1-> + TERM EXP1 | - TERM EXP1 |ε
+TERM->FACTOR TERM1
+TERM1-> ** FACTOR TERM1 |ε
+FACTOR->(EXP)|NUM
+NUM ->DIGIT TEMP
+TEMP->NUM|ε
+DIGIT -> 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
+
+
+Nonterminal 	FIRST set		FOLLOW set			FIRST+ set
+GOAL		'(' '0..9' 		')' $				'(' '0..9'
+EXP		'(' '0..9'		')' $				'(' '0..9'
+EXP1  		ε '+' '-'		')' $		 		')' '+' '-' $
+TERM		'(' '0..9'		')' '+' '-' $			'(' '0..9'
+TERM1 		ε '**'			')' '+' '-' $			')' '**' '+' '-' $
+FACTOR 		'(' '0..9'		')' '**' '+' '-' $		'(' '0..9'
+NUM 		'0..9'			')' '**' '+' '-' $		'0..9'
+TEMP  		ε '0..9'		')' '**' '+' '-' $		')' '0..9' '**' '+' '-' $
+DIGIT 		'0..9'			')' '0..9' '**' '+' '-' $	'0..9'
+
+
+	0..9	        	(			)		 	**			-			+
+EXP	TERM EXP1		TERM EXP1	 	err			err			err			err
+EXP1	err			err			ε			err			- TERM EXP1		+ TERM EXP1
+TERM	FACTOR TERM1		FACTOR TERM1		err			err			err			err
+TERM1	err			err			ε			** FACTOR TERM1		ε			ε
+FACTOR	NUM			(EXP)			err			err			err			err
+NUM	DIGIT TEMP		err			err			err			err			err
+TEMP	NUM			err			ε			ε			ε			ε
+DIGIT	0..9			err			err			err			err			err	
+
+
+
+ 	 	 	

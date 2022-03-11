@@ -1,0 +1,91 @@
+/* Simple +/-/* expression language; parser evaluates constant expressions on the fly*/
+/**
+ *  Package and Import Specifications
+ */
+import java_cup.runtime.*;
+
+/**
+ *  Usercode Components
+ */
+parser code {:
+    // Connect this parser to a scanner!
+    Scanner s;
+    Parser(Scanner s){ this.s=s; }
+:}
+
+/* define how to connect to the scanner! */
+scan with {: return s.next_token(); :};
+
+/**
+ *  Symbol Lists
+ */
+
+/* Terminals (tokens returned by the scanner). */
+terminal            PLUS,LPAREN, RPAREN,NAME,COMMA,LBRACKET,RBRACKET,IF,ELSE,PREFIX,SUFFIX;
+terminal String     STRING_LITERAL;
+
+/*  Non terminals */
+non terminal            program;
+non terminal String    functioncall,function,inner, argument,expr_list,argumentcall,concat,if;      // used to store evaluated subexpressions
+
+/**
+ *  Precedence Declarations
+ */
+precedence left PLUS,NAME, STRING_LITERAL;
+precedence right LPAREN;
+
+/**
+ *  The Grammar Rules
+ */
+
+
+program ::= expr_list:e{:
+			System.out.println("public class Main {");
+			System.out.println("\tpublic static void main(String[] args) {");
+			System.out.printf("%s", e);
+			System.out.println("\t");
+			System.out.println("}");
+			 :}
+	;
+
+expr_list       ::= function:e expr_list:rest                 {: RESULT = String.format("%s %s", rest, e); :}
+                |functioncall:e expr_list:rest                {: RESULT = String.format("\t\tSystem.out.println(%s);\n %s",e,rest); :}
+                |                                              {:RESULT = String.format("\t}\n"); :}
+                ;
+
+function        ::= NAME:n LPAREN argument:a LBRACKET  inner:i RBRACKET {: RESULT = String.format("\n\tpublic static String %s(%s) {",n,a)+i+"\n\t}"; :}
+                ;
+
+functioncall    ::= NAME:n LPAREN argumentcall:a RPAREN         {: RESULT = String.format("%s(%s)",n,a); :}
+                | STRING_LITERAL:s                               {: RESULT = String.format("%s",s);:}
+                | functioncall:s PLUS functioncall:c            {: RESULT = String.format("%s",s+" + "+c);:}
+                | IF LPAREN if:e RPAREN concat:c ELSE concat:t          {: RESULT = String.format("((%s)?(%s):(%s))",e,c,t);:}
+                ;
+
+argumentcall    ::= functioncall:f                            {: RESULT = String.format("%s",f); :}
+                | STRING_LITERAL:n COMMA argumentcall:a     {: RESULT = String.format("%s",n+","+a); :}
+                | functioncall:f COMMA argumentcall:a       {: RESULT = String.format("%s",f+","+a); :}
+                | NAME:n                                    {: RESULT = String.format("%s",n); :}
+                | NAME:n COMMA argumentcall:n1              {: RESULT = String.format("%s,%s",n,n1); :}
+                | argumentcall:n PLUS argumentcall:n1        {: RESULT = String.format("%s + %s",n,n1); :}
+                |                                           {: RESULT = String.format(""); :}
+                ;      
+
+argument    ::= NAME:n                              {: RESULT = String.format("String %s",n); :}
+            | NAME:n COMMA argument:a               {: RESULT = String.format("String %s",n + ","+ a); :}
+            |                                       {: RESULT = String.format(""); :}
+            ;
+
+inner       ::=  concat:c                {: RESULT = String.format("\n\t\t return  %s ;",c);:}
+                |                           {: RESULT = String.format(""); :}
+                ;      
+
+concat      ::=  functioncall:e                         {: RESULT = String.format("%s",e);:}               
+                | NAME:n                                {: RESULT = String.format("%s",n);:}
+                | concat:c1 PLUS concat:c2              {: RESULT = String.format("%s",c1+" + "+c2);:}
+                | functioncall:e PLUS NAME:c2           {: RESULT = String.format("%s+%s",e,c2);:}
+                ;
+
+if          ::=concat:i PREFIX concat:i1                  {: RESULT = String.format("(%s).startsWith(%s)",i1,i);:}
+              |concat:i SUFFIX concat:i1                  {: RESULT = String.format("(%s).endsWith(%s)",i1,i);:}
+              ;
